@@ -6,8 +6,8 @@
 
 import type { Action, Assignment, TypeAttribute } from '../../../languages/generated/ast.js';
 import { hasBooleanType } from '../types-util.js';
-import type { AstTypes, Property, PropertyType } from './types.js';
-import { InterfaceType, UnionType, isArrayType } from './types.js';
+import type { AstTypes, Property, PropertyDefaultValue, PropertyType } from './types.js';
+import { InterfaceType, UnionType, isArrayType, isReferenceType } from './types.js';
 
 export interface PlainAstTypes {
     interfaces: PlainInterface[];
@@ -160,13 +160,26 @@ function plainToProperty(property: PlainProperty, interfaces: Map<string, Interf
         type: plainToPropertyType(property.type, undefined, interfaces, unions)
     };
     if (property.defaultValue !== undefined) {
-        prop.defaultValue = property.defaultValue;
+        if (isReferenceType(prop.type) || (isArrayType(prop.type) && prop.type.elementType !== undefined && isReferenceType(prop.type.elementType))) {
+            prop.defaultValue = plainToDefaultValueReference(property.defaultValue);
+        } else {
+            prop.defaultValue = property.defaultValue;
+        }
     } else if (hasBooleanType(prop.type)) {
         prop.defaultValue = false;
     } else if (isArrayType(prop.type)) {
         prop.defaultValue = [];
     }
     return prop;
+}
+
+function plainToDefaultValueReference(value: PlainPropertyDefaultValue): PropertyDefaultValue {
+    if (Array.isArray(value)) {
+        return value.map(v => plainToDefaultValueReference(v));
+    }
+    if (typeof value === 'string')
+        return { $defaultRefText: value };
+    return { $defaultRefText: value.toString() };
 }
 
 function plainToPropertyType(type: PlainPropertyType, union: UnionType | undefined, interfaces: Map<string, InterfaceType>, unions: Map<string, UnionType>): PropertyType {

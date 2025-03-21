@@ -217,9 +217,20 @@ export interface TypeProperty {
 }
 
 /**
+ * A default cross-reference in the AST. It will be replaced by a Reference during parsing.
+ */
+export interface DefaultReference {
+    /** The default text used to look up in the surrounding scope */
+    readonly $defaultRefText: string;
+}
+export function isDefaultReference(obj: unknown): obj is DefaultReference {
+    return typeof obj === 'object' && obj !== null && typeof (obj as DefaultReference).$defaultRefText === 'string';
+}
+
+/**
  * Represents a default value for an AST property.
  */
-export type PropertyType = number | string | boolean | PropertyType[];
+export type PropertyType = number | string | boolean | PropertyType[] | DefaultReference;
 
 /**
  * A node in the Concrete Syntax Tree (CST).

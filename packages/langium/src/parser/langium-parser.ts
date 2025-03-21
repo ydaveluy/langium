@@ -9,7 +9,7 @@ import type { DSLMethodOpts, ILexingError, IOrAlt, IParserErrorMessageProvider, 
 import type { AbstractElement, Action, Assignment, ParserRule } from '../languages/generated/ast.js';
 import type { Linker } from '../references/linker.js';
 import type { LangiumCoreServices } from '../services.js';
-import type { AstNode, AstReflection, CompositeCstNode, CstNode } from '../syntax-tree.js';
+import { isDefaultReference, type AstNode, type AstReflection, type CompositeCstNode, type CstNode, type GenericAstNode } from '../syntax-tree.js';
 import type { Lexer, LexerResult } from './lexer.js';
 import type { IParserConfig } from './parser-config.js';
 import type { ValueConverter } from './value-converter.js';
@@ -387,8 +387,24 @@ export class LangiumParser extends AbstractLangiumParser {
             return this.converter.convert(obj.value, obj.$cstNode);
         } else {
             assignMandatoryProperties(this.astReflection, obj);
+            this.replaceDefaultReferences(obj);
         }
         return obj;
+    }
+    private replaceDefaultReferences(obj: AstNode): void{
+        const genericNode = obj as GenericAstNode;
+        for (const key of Object.keys(genericNode)) {
+            const value = genericNode[key];
+            if (isDefaultReference(value)) {
+                genericNode[key] = this.linker.buildReference(obj, key, undefined, value.$defaultRefText);
+            } else if (Array.isArray(value)) {
+                value.forEach((v, i) => {
+                    if (isDefaultReference(v)) {
+                        value[i] = this.linker.buildReference(obj, key, undefined, v.$defaultRefText);
+                    }
+                }, this);
+            }
+        }
     }
 
     private getAssignment(feature: AbstractElement): AssignmentElement {

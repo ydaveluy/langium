@@ -5,7 +5,7 @@
  ******************************************************************************/
 
 import { expandToNode, expandToStringWithNL, joinToNode, toString, type Generated } from '../../../generate/index.js';
-import type { CstNode } from '../../../syntax-tree.js';
+import type { CstNode, DefaultReference } from '../../../syntax-tree.js';
 import type { Action, Assignment, TypeAttribute } from '../../../languages/generated/ast.js';
 import { distinctAndSorted, escapeQuotes } from '../types-util.js';
 
@@ -17,7 +17,7 @@ export interface Property {
     astNodes: Set<Assignment | Action | TypeAttribute>;
 }
 
-export type PropertyDefaultValue = string | number | boolean | PropertyDefaultValue[];
+export type PropertyDefaultValue = string | number | boolean | PropertyDefaultValue[] | DefaultReference;
 
 export type PropertyType =
     | ReferenceType
@@ -326,7 +326,7 @@ function isTypeAssignableInternal(from: PropertyType | undefined, to: PropertyTy
     } else if (isPrimitiveType(from)) {
         result = isPrimitiveType(to) && from.primitive === to.primitive;
     } else if (isStringType(from)) {
-        result = (isPrimitiveType(to) && to.primitive === 'string') || (isStringType(to) && to.string === from.string);
+        result = (isPrimitiveType(to) && to.primitive === 'string') || (isStringType(to) && to.string === from.string) || isReferenceType(to);
     }
     if (result) {
         visited.set(key, result);

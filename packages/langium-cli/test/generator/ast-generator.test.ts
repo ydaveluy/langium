@@ -438,6 +438,44 @@ describe('Ast generator', () => {
             }
         }`
     );
+
+    testTypeMetaData('should generate default value for references', `
+        grammar TestGrammar
+             
+        interface Test {
+            name: string;
+            ref:@Test = 'a'
+            ref2:@Test[] = ['a','b','c']
+        }
+          
+        Test returns Test:
+            value=ID;
+
+        hidden terminal WS: /\\s+/;
+        terminal ID: /[_a-zA-Z][\\w_]*/;
+    `, expandToString`
+        getTypeMetaData(type: string): langium.TypeMetaData {
+                switch (type) {
+                    case Test: {
+                        return {
+                            name: Test,
+                            properties: [
+                                { name: 'name' },
+                                { name: 'ref', defaultValue: {$defaultRefText: 'a'} },
+                                { name: 'ref2', defaultValue: [{$defaultRefText: 'a'}, {$defaultRefText: 'b'}, {$defaultRefText: 'c'}] }
+                            ]
+                        };
+                    }
+                    default: {
+                        return {
+                            name: type,
+                            properties: []
+                        };
+                    }
+                }
+            }
+        }`
+    );
 });
 
 async function testTerminalConstants(grammar: string, expected: string) {

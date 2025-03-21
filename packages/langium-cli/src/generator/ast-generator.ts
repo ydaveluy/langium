@@ -7,8 +7,8 @@ import type { Grammar, LangiumCoreServices } from 'langium';
 import { EOL, type Generated, expandToNode, joinToNode, toString } from 'langium/generate';
 import type { AstTypes, Property, PropertyDefaultValue } from 'langium/grammar';
 import type { LangiumConfig } from '../package-types.js';
-import { MultiMap } from 'langium';
-import { collectAst, collectTypeHierarchy, findReferenceTypes, isAstType, mergeTypesAndInterfaces, escapeQuotes } from 'langium/grammar';
+import { isDefaultReference, MultiMap } from 'langium';
+import { collectAst, collectTypeHierarchy, findReferenceTypes, isAstType, mergeTypesAndInterfaces, escapeQuotes, hasReferenceType } from 'langium/grammar';
 import { generatedHeader } from './node-util.js';
 import { collectKeywords, collectTerminalRegexps } from './langium-util.js';
 
@@ -125,6 +125,8 @@ function stringifyDefaultValue(value?: PropertyDefaultValue): string | undefined
         return `'${escapeQuotes(value, "'")}'`;
     } else if (Array.isArray(value)) {
         return `[${value.map(e => stringifyDefaultValue(e)).join(', ')}]`;
+    } else if( isDefaultReference(value)) {
+        return `{$defaultRefText: '${escapeQuotes(value.$defaultRefText, "'")}'}`;
     } else if (value !== undefined) {
         return value.toString();
     } else {

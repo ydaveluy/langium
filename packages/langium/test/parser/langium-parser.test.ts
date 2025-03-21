@@ -92,3 +92,55 @@ describe('hidden node parsing', () => {
 interface A extends AstNode {
     name: string
 }
+
+describe('Resolve default references', async () => {
+    const grammar = `
+        grammar Test
+        entry Model:
+            elements+=(Primitve|Type) *;
+
+        interface Primitive {
+            name:string
+        }
+        interface Type {
+            name:string
+            primitive:@Primitive = 'int32'
+            primitiveArray:@Primitive[] = ['int32', 'int64']
+        }
+        Primitve returns Primitive:
+            'primitive' name=ID;
+
+        Type returns Type:
+            'type' name=ID ('extends' primitive=[Primitive:ID])?
+            ('implements' primitiveArray+=[Primitive:ID] (',' primitiveArray+=[Primitive:ID])*)?;
+
+        hidden terminal WS: /\\s+/;
+        terminal ID: /[_a-zA-Z][\\w_]*/;
+    `;
+
+    const parser = parseHelper<AstNode>(await createServicesForGrammar({grammar}));
+
+    test('resolve default references', async () => {
+        const document = await parser(`
+            primitive int8
+            primitive int16
+            primitive int32
+            primitive int64
+            type T
+            type T2 extends int8 implements int8, int16
+        `, { documentUri: 'test://test.model' });
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const model = document.parseResult.value as any;
+
+        // check default references are valids
+        expect(model.elements[4].primitive?.ref?.name).toBe('int32');
+        expect(model.elements[4].primitiveArray[0].ref?.name).toBe('int32');
+        expect(model.elements[4].primitiveArray[1].ref?.name).toBe('int64');
+
+        // check default references are properly overriden
+        expect(model.elements[5].primitive?.ref?.name).toBe('int8');
+        expect(model.elements[5].primitiveArray[0].ref?.name).toBe('int8');
+        expect(model.elements[5].primitiveArray[1].ref?.name).toBe('int16');
+    });
+});

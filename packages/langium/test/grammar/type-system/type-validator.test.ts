@@ -39,6 +39,22 @@ describe('validate params in types', () => {
         expect(d.range.start).toEqual({ character: 8, line: 4 });
         expect(d.range.end).toEqual({ character: 10, line: 4 });
     });
+    // verifies that properties with default value for references are valid
+    test('verify properties with default value for reference are valid', async () => {
+        const prog = `
+        interface B {
+            name:string
+            ref:@B='b'
+            ref2:@B[]=['b','c','d']
+        }
+        X2 returns B: name=ID;
+        terminal ID: /[a-zA-Z_][\\w_]*/;
+        `.trim();
+        const document = await parseDocument(grammarServices, prog);
+        let diagnostics: Diagnostic[] = await grammarServices.validation.DocumentValidator.validateDocument(document);
+        diagnostics = diagnostics.filter(d => d.severity === DiagnosticSeverity.Error);
+        expect(diagnostics).toHaveLength(0);
+    });
     // verifies that properties with default value are not required
     test('verify property with default value not required, for single rule', async () => {
         const prog = `
